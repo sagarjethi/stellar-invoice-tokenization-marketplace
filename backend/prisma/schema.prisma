@@ -1,0 +1,252 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SMB
+  INVESTOR
+  ADMIN
+  VERIFIER
+}
+
+enum KYCStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING_APPROVAL
+  LISTED
+  FUNDED
+  PAID
+  DEFAULT
+  CANCELLED
+}
+
+enum EscrowStatus {
+  PENDING
+  FUNDED
+  RELEASED
+  DEFAULT
+}
+
+enum TransactionType {
+  TOKEN_MINT
+  TOKEN_PURCHASE
+  ESCROW_DEPOSIT
+  ESCROW_RELEASE
+  PAYOUT
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PayoutStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  role              UserRole
+  stellarAccountId String?   @unique @map("stellar_account_id")
+  kycStatus         KYCStatus @default(PENDING) @map("kyc_status")
+  kycData           Json?     @map("kyc_data")
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  smbProfile        SMBProfile?
+  invoices          Invoice[]
+  investments       TokenOwnership[]
+  escrowTransactions EscrowTransaction[]
+  payments          Payment[]
+  payouts           Payout[]
+  transactions      Transaction[]
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+model SMBProfile {
+  id                      String   @id @default(uuid())
+  userId                  String   @unique @map("user_id")
+  businessName            String   @map("business_name")
+  businessRegistrationNumber String @map("business_registration_number")
+  taxId                   String   @map("tax_id")
+  address                 Json
+  bankAccountDetails      Json     @map("bank_account_details")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("smb_profiles")
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  invoiceNumber   String        @unique @map("invoice_number")
+  smbId           String        @map("smb_id")
+  buyerId         String        @map("buyer_id")
+  buyerName       String        @map("buyer_name")
+  totalAmount     Decimal       @map("total_amount") @db.Decimal(18, 2)
+  currency        String        @default("USD")
+  dueDate         DateTime      @map("due_date") @db.Date
+  issueDate       DateTime      @map("issue_date") @db.Date
+  metadataHash    String        @map("metadata_hash")
+  invoiceDocumentUrl String?    @map("invoice_document_url")
+  details         Json?         @map("details")
+  status          InvoiceStatus
+  discountRate    Decimal       @map("discount_rate") @db.Decimal(5, 2)
+  approvedAt      DateTime?     @map("approved_at")
+  fundedAt        DateTime?     @map("funded_at")
+  paidAt          DateTime?     @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  smb             User          @relation(fields: [smbId], references: [id])
+  invoiceToken    InvoiceToken?
+  escrowTransactions EscrowTransaction[]
+  payments        Payment[]
+  payouts         Payout[]
+  transactions    Transaction[]
+
+  @@index([smbId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
+model InvoiceToken {
+  id              String   @id @default(uuid())
+  invoiceId       String   @unique @map("invoice_id")
+  tokenContractId String  @map("token_contract_id")
+  tokenId         String   @map("token_id")
+  totalSupply     BigInt   @map("total_supply")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  ownerships      TokenOwnership[]
+
+  @@map("invoice_tokens")
+}
+
+model TokenOwnership {
+  id                  String   @id @default(uuid())
+  tokenId             String   @map("token_id")
+  investorId          String   @map("investor_id")
+  amount              BigInt
+  purchasePrice       Decimal  @map("purchase_price") @db.Decimal(18, 2)
+  purchaseDate        DateTime @default(now()) @map("purchase_date")
+  stellarTransactionHash String @map("stellar_transaction_hash")
+
+  token               InvoiceToken @relation(fields: [tokenId], references: [id])
+  investor            User         @relation(fields: [investorId], references: [id])
+
+  @@index([tokenId])
+  @@index([investorId])
+  @@map("token_ownership")
+}
+
+model EscrowTransaction {
+  id                  String       @id @default(uuid())
+  invoiceId           String       @map("invoice_id")
+  escrowContractId    String       @map("escrow_contract_id")
+  investorId          String       @map("investor_id")
+  amountEscrowed      Decimal      @map("amount_escrowed") @db.Decimal(18, 2)
+  status              EscrowStatus
+  stellarTransactionHash String     @map("stellar_transaction_hash")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  releasedAt          DateTime?    @map("released_at")
+
+  invoice             Invoice      @relation(fields: [invoiceId], references: [id])
+  investor            User         @relation(fields: [investorId], references: [id])
+
+  @@index([invoiceId])
+  @@map("escrow_transactions")
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  invoiceId         String   @map("invoice_id")
+  verifierId        String   @map("verifier_id")
+  paymentAmount     Decimal  @map("payment_amount") @db.Decimal(18, 2)
+  paymentDate       DateTime @map("payment_date") @db.Date
+  paymentMethod     String   @map("payment_method")
+  confirmationProof String   @map("confirmation_proof")
+  confirmedAt       DateTime @default(now()) @map("confirmed_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  invoice           Invoice  @relation(fields: [invoiceId], references: [id])
+  verifier          User     @relation(fields: [verifierId], references: [id])
+
+  @@map("payments")
+}
+
+model Payout {
+  id                  String       @id @default(uuid())
+  invoiceId           String       @map("invoice_id")
+  recipientId         String       @map("recipient_id")
+  recipientType       String       @map("recipient_type")
+  amount              Decimal      @db.Decimal(18, 2)
+  stellarTransactionHash String     @map("stellar_transaction_hash")
+  status              PayoutStatus
+  createdAt           DateTime     @default(now()) @map("created_at")
+  completedAt         DateTime?    @map("completed_at")
+
+  invoice             Invoice      @relation(fields: [invoiceId], references: [id])
+  recipient           User         @relation(fields: [recipientId], references: [id])
+
+  @@map("payouts")
+}
+
+model Transaction {
+  id                  String            @id @default(uuid())
+  type                TransactionType
+  invoiceId           String?           @map("invoice_id")
+  userId              String            @map("user_id")
+  stellarTransactionHash String         @map("stellar_transaction_hash")
+  amount              Decimal?          @db.Decimal(18, 2)
+  status              TransactionStatus
+  errorMessage        String?           @map("error_message")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  completedAt         DateTime?         @map("completed_at")
+
+  invoice             Invoice?          @relation(fields: [invoiceId], references: [id])
+  user                User              @relation(fields: [userId], references: [id])
+
+  @@index([stellarTransactionHash])
+  @@index([userId])
+  @@map("transactions")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  changes     Json?
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
