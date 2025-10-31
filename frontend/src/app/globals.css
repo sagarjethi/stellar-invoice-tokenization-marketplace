@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 239 100% 97%;
+    --foreground: 218 38% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 218 38% 25%;
+    --primary: 220 75% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 218 38% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 230 100% 90%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 230 100% 90%;
+    --accent-foreground: 218 38% 25%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 220 75% 48%;
+    --radius: 0.5rem;
+    
+    --primary-blue: 220 75% 48%;
+    --dark-navy: 218 38% 25%;
+    --accent-red: 4 90% 58%;
+    --light-lavender: 230 100% 90%;
+    --light-blue: 239 100% 97%;
+  }
+
+  .dark {
+    --background: 218 38% 10%;
+    --foreground: 0 0% 98%;
+    --card: 218 38% 15%;
+    --card-foreground: 0 0% 98%;
+    --primary: 220 75% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 218 38% 30%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 218 38% 20%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 218 38% 20%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 218 38% 25%;
+    --input: 218 38% 25%;
+    --ring: 220 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  }
+}
+
