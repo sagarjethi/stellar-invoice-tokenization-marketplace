@@ -51,3 +51,7 @@ temp/
 
 # Documentation
 docs/
+
+# Deployment/Repo Scripts
+push_repo.sh
+generate_push.py

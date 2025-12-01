@@ -45,5 +45,7 @@ export const createInvoiceSchema = z.object({
   discountRate: z.number().min(0).max(100, 'Discount rate must be between 0 and 100'),
   invoiceDocumentUrl: z.string().url().optional(),
   metadataHash: z.string().min(1, 'Metadata hash is required'),
+  note: z.string().optional(),
+  details: z.any().optional(),
 });
 

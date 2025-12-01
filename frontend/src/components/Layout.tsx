@@ -20,7 +20,8 @@ export default function Layout({ children }: LayoutProps) {
     '/invoices',
     '/marketplace',
     '/investments',
-    '/admin'
+    '/admin',
+    '/profile'
   ];
   
   if (authenticatedPages.some(page => pathname?.startsWith(page))) {

@@ -117,7 +117,7 @@ export const approveInvoice = async (
     const invoiceToken = await tokenizationService.tokenizeInvoice({
       invoiceId: id,
       totalAmount: Number(invoice.totalAmount) / 10000000,
-      discountRate: invoice.discountRate,
+      discountRate: Number(invoice.discountRate),
     });
 
     const updated = await prisma.invoice.findUnique({

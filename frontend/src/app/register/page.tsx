@@ -5,26 +5,37 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { useToast } from '@/components/ui/toast/Toast';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'SMB' | 'INVESTOR'>('SMB');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuthStore();
   const router = useRouter();
+  const { addToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+
+    if (!email.trim() || !password.trim()) {
+      addToast('Please fill in all fields.', 'error');
+      return;
+    }
+    if (password.length < 8) {
+      addToast('Password must be at least 8 characters long.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await register(email, password, role);
+      addToast('Registration successful!', 'success');
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Registration failed');
+      addToast(err.response?.data?.error?.message || 'Registration failed', 'error');
     } finally {
       setLoading(false);
     }
@@ -38,11 +49,6 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-red-50 border-2 border-accent-red p-3 text-sm text-accent-red">
-                {error}
-              </div>
-            )}
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-1 text-dark-navy">
                 Email

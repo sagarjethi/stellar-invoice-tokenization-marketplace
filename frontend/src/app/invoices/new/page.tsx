@@ -18,11 +18,14 @@ interface LineItem {
   lineTotal: string;
 }
 
+import { useToast } from '@/components/ui/toast/Toast';
+
 export default function NewInvoicePage() {
   const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [zoomLevel, setZoomLevel] = useState(100);
   const [showSecurityBanner, setShowSecurityBanner] = useState(true);
   const [logo, setLogo] = useState<string | null>(null);
   
@@ -128,10 +131,56 @@ export default function NewInvoicePage() {
     }
   };
 
+  const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setZoomLevel(parseInt(e.target.value));
+  };
+
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 10, 150));
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    // In a real implementation, use libraries like 'html2canvas' and 'jspdf' to capture the invoice preview div and save as PDF.
+    // Since we can't add new packages easily, we will trigger the print dialog as a fallback which allows saving as PDF.
+    window.print();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+
+    // Frontend Validation
+    if (!formData.invoiceNumber.trim()) {
+      addToast('Invoice Number is required.', 'error');
+      setLoading(false);
+      return;
+    }
+    if (!formData.issueDate || !formData.dueDate) {
+      addToast('Issue Date and Due Date are required.', 'error');
+      setLoading(false);
+      return;
+    }
+    if (new Date(formData.dueDate) < new Date(formData.issueDate)) {
+      addToast('Due Date cannot be earlier than Issue Date.', 'error');
+      setLoading(false);
+      return;
+    }
+    if (lineItems.length === 0) {
+      addToast('Please add at least one line item.', 'error');
+      setLoading(false);
+      return;
+    }
+    
+    const calculatedTotal = calculateTotal();
+    if (calculatedTotal <= 0) {
+      addToast('Total amount must be greater than 0.', 'error');
+      setLoading(false);
+      return;
+    }
 
     try {
       const metadataHash = 'temp-hash';
@@ -142,7 +191,7 @@ export default function NewInvoicePage() {
         client: clientData,
         lineItems: lineItems,
         note: formData.note,
-        logo: logo // storing base64 logo in details (be careful with size)
+        logo: logo
       };
 
       const response = await api.post('/invoices', {
@@ -151,12 +200,13 @@ export default function NewInvoicePage() {
         totalAmount: calculateTotal(),
         discountRate: parseFloat(formData.discountRate),
         metadataHash,
-        details // Send the structured details
+        details
       });
 
       router.push(`/invoices/${response.data.invoice.id}`);
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to create invoice');
+      console.error(err);
+      addToast(err.response?.data?.error?.message || 'Failed to create invoice', 'error');
     } finally {
       setLoading(false);
     }
@@ -578,12 +628,6 @@ export default function NewInvoicePage() {
                 />
               </CardContent>
             </Card>
-
-            {error && (
-              <div className="rounded-md bg-red-50 border-2 border-accent-red p-3 text-sm text-accent-red">
-                {error}
-              </div>
-            )}
           </div>
         </div>
 
@@ -591,30 +635,52 @@ export default function NewInvoicePage() {
         <div className="w-[40%] bg-light-lavender rounded-lg p-6 overflow-y-auto">
           <div className="space-y-4">
             {/* Preview Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center sticky top-0 bg-light-lavender z-10 py-2">
               <h2 className="text-2xl font-bold text-dark-navy">Preview</h2>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 bg-white px-2 py-1 rounded">
-                  <input type="range" min="50" max="150" defaultValue="100" className="w-16" />
+                <div className="flex items-center gap-2 bg-white px-2 py-1 rounded shadow-sm">
+                  <input 
+                    type="range" 
+                    min="50" 
+                    max="150" 
+                    value={zoomLevel} 
+                    onChange={handleZoomChange}
+                    className="w-20 accent-primary h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer" 
+                  />
+                  <span className="text-xs text-muted-foreground w-8 text-right">{zoomLevel}%</span>
                 </div>
-                <button className="p-2 hover:bg-white rounded transition-colors">
+                <button 
+                  className="p-2 hover:bg-white rounded transition-colors" 
+                  onClick={handleZoomIn}
+                  title="Zoom In"
+                >
                   <ZoomIn className="w-4 h-4 text-dark-navy" />
                 </button>
-                <button className="p-2 hover:bg-white rounded transition-colors">
+                {/* FileText button removed or repurposed if needed */}
+                {/* <button className="p-2 hover:bg-white rounded transition-colors">
                   <FileText className="w-4 h-4 text-dark-navy" />
-                </button>
-                <button className="p-2 hover:bg-white rounded transition-colors">
+                </button> */}
+                <button 
+                  className="p-2 hover:bg-white rounded transition-colors" 
+                  onClick={handlePrint}
+                  title="Print Invoice"
+                >
                   <Printer className="w-4 h-4 text-dark-navy" />
                 </button>
-                <Button size="sm" className="bg-dark-navy text-white">
+                <Button 
+                  size="sm" 
+                  className="bg-dark-navy text-white hover:bg-dark-navy/90"
+                  onClick={handleDownloadPDF}
+                >
                   PDF
                 </Button>
               </div>
             </div>
 
             {/* Invoice Preview Card */}
-            <Card className="bg-white shadow-lg">
-              <CardContent className="p-8">
+            <div style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease-out' }}>
+            <Card className="bg-white shadow-lg print:shadow-none print:border-none">
+              <CardContent className="p-8 print:p-0">
                 {/* Header */}
                 <div className="flex justify-between items-start mb-8">
                   <div>
@@ -721,6 +787,7 @@ export default function NewInvoicePage() {
                 </div>
               </CardContent>
             </Card>
+            </div>
           </div>
         </div>
       </div>

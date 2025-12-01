@@ -26,11 +26,14 @@ export const createInvoice = async (data: CreateInvoiceData) => {
     throw new AppError(409, 'Invoice number already exists', 'INVOICE_EXISTS');
   }
 
+  const { note, details, ...invoiceData } = data as any;
+
   const invoice = await prisma.invoice.create({
     data: {
-      ...data,
+      ...invoiceData,
       status: InvoiceStatus.DRAFT,
-      currency: data.currency || 'USD',
+      currency: invoiceData.currency || 'USD',
+      details: details || (note ? { note } : undefined),
     },
     include: {
       smb: {

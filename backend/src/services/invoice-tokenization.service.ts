@@ -1,6 +1,6 @@
 import prisma from '../config/database';
 import { contractService } from './contract.service';
-import { stellarService } from './stellar.service';
+// import { stellarService } from './stellar.service';
 import { AppError } from '../utils/errors';
 import crypto from 'crypto';
 
@@ -101,8 +101,8 @@ export const tokenizeInvoice = async (data: TokenizeInvoiceData) => {
         userId: invoice.smbId,
         invoiceId: invoice.id,
         type: 'TOKEN_MINT',
-        amount: totalSupply,
-        transactionHash: txHash,
+        amount: Number(totalSupply),
+        stellarTransactionHash: txHash,
         status: 'SUCCESS',
       },
     });

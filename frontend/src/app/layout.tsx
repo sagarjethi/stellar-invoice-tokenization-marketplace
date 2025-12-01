@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Manrope } from 'next/font/google'
 import './globals.css'
 import Layout from '@/components/Layout'
+import { ToastProvider } from '@/components/ui/toast/Toast'
 
 const manrope = Manrope({
   subsets: ['latin'],
@@ -22,7 +23,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={manrope.variable}>
       <body>
-        <Layout>{children}</Layout>
+        <ToastProvider>
+          <Layout>{children}</Layout>
+        </ToastProvider>
       </body>
     </html>
   )

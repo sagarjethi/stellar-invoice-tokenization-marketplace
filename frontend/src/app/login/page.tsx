@@ -5,25 +5,32 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { useToast } from '@/components/ui/toast/Toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuthStore();
   const router = useRouter();
+  const { addToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    
+    if (!email.trim() || !password.trim()) {
+      addToast('Please enter both email and password.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await login(email, password);
+      addToast('Login successful!', 'success');
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Login failed');
+      addToast(err.response?.data?.error?.message || 'Login failed', 'error');
     } finally {
       setLoading(false);
     }
@@ -37,11 +44,6 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-red-50 border-2 border-accent-red p-3 text-sm text-accent-red">
-                {error}
-              </div>
-            )}
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-1 text-dark-navy">
                 Email

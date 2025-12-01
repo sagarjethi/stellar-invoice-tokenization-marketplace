@@ -92,9 +92,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Settings className="w-5 h-5 text-dark-navy" />
               </button>
 
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm">
-                {userName.charAt(0).toUpperCase()}
-              </div>
+              <Link href="/profile">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm hover:bg-primary/90 transition-colors cursor-pointer">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+              </Link>
             </div>
           </div>
         </div>
